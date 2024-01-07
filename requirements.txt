@@ -1,0 +1,5 @@
+PyQt5==5.15.6
+pandas==1.2.1  # Use the correct version
+pulp==2.7.0
+numpy==1.26.3
+
