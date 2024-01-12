@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget
+    QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget,QRadioButton
 )
 import pandas as pd
 from pulp import *
@@ -22,7 +22,9 @@ class NutritionApp(QWidget):
         # Line edits for user input
         self.kg_input = QLineEdit(self)
         self.calories_input = QLineEdit(self)
-
+       # Radioboxes for gender selection
+        self.male_radio = QRadioButton("Male", self)
+        self.female_radio = QRadioButton("Female", self)
         # Button to trigger diet calculation
         self.calculate_button = QPushButton('Generate List', self)
         self.calculate_button.clicked.connect(self.calculate_diet)
@@ -41,6 +43,10 @@ class NutritionApp(QWidget):
         layout.addWidget(self.kg_input)
         layout.addWidget(self.calories_label)
         layout.addWidget(self.calories_input)
+        # Radioboxes for gender selection
+        layout.addWidget(self.male_radio)
+        layout.addWidget(self.female_radio)
+
         layout.addWidget(self.calculate_button)
         layout.addWidget(self.daily_protein_label)
         layout.addWidget(self.daily_carbs_label)
@@ -52,6 +58,7 @@ class NutritionApp(QWidget):
         # Get user input for weight and daily calories
         kg = float(self.kg_input.text())
         calories = float(self.calories_input.text())
+        gender = "Male" if self.male_radio.isChecked() else "Female"
 
         # Read and preprocess the data
         data = pd.read_csv('nutrition.csv').drop('Unnamed: 0', axis=1)
@@ -71,14 +78,34 @@ class NutritionApp(QWidget):
             return dict(zip(week_days, day_data))
 
         # Calculate nutritional values
-        def build_nutritional_values(kg, calories):
-            protein_calories = kg * 4
-            carb_calories = calories / 2.0
-            fat_calories = calories - carb_calories - protein_calories
+        def build_nutritional_values(kg, calories, gender):
+            if gender == "Male":
+                # Male coefficients
+                protein_calories = kg * 4
+                carb_calories = calories / 2.0
+                fat_calories = calories - carb_calories - protein_calories
 
-            protein_grams = protein_calories / 4.0
-            carbs_grams = carb_calories / 4.0
-            fat_grams = fat_calories / 9.0
+                protein_grams = protein_calories / 4.0 * 1.2
+                carbs_grams = carb_calories / 4.0
+                fat_grams = fat_calories / 9.0
+            elif gender == "Female":
+                # Female coefficients
+                protein_calories = kg * 3.5
+                carb_calories = calories / 2.5
+                fat_calories = calories - carb_calories - protein_calories
+
+                protein_grams = protein_calories / 4.0 * 1.1
+                carbs_grams = carb_calories / 4.0
+                fat_grams = fat_calories / 9.0
+            else:
+                # Default coefficients or handle error
+                protein_calories = kg * 4
+                carb_calories = calories / 2.0
+                fat_calories = calories - carb_calories - protein_calories
+
+                protein_grams = protein_calories / 4.0
+                carbs_grams = carb_calories / 4.0
+                fat_grams = fat_calories / 9.0
 
             return {
                 'Protein Calories': protein_calories,
@@ -90,7 +117,7 @@ class NutritionApp(QWidget):
             }
 
         # Calculate daily nutritional values based on user input for weight and calories
-        nutritional_values = build_nutritional_values(kg, calories)
+        nutritional_values = build_nutritional_values(kg, calories,gender)
 
         # Display daily nutritional values in the user interface
         self.daily_protein_label.setText(f"Daily Protein (g): {nutritional_values['Protein Grams']:.2f}")
@@ -108,7 +135,7 @@ class NutritionApp(QWidget):
         days_data = random_dataset()
 
         def model(day, kg, calories):
-            G = extract_gram(build_nutritional_values(kg, calories))
+            G = extract_gram(build_nutritional_values(kg, calories,gender))
             E, F, P = G['Carbohydrates Grams'], G['Fat Grams'], G['Protein Grams']
             day_data = days_data[day]
             day_data = day_data[day_data.calories != 0]
